@@ -1,5 +1,8 @@
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.logging_config import setup_logging, get_logger
@@ -10,6 +13,22 @@ setup_logging()
 logger = get_logger(__name__)
 
 settings = get_settings()
+
+# Initialize Sentry if DSN is provided
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        traces_sample_rate=1.0 if settings.debug else 0.1,  # 100% in dev, 10% in prod
+        profiles_sample_rate=1.0 if settings.debug else 0.1,  # 100% in dev, 10% in prod
+        integrations=[
+            FastApiIntegration(transaction_style="endpoint"),
+            LoggingIntegration(level=None, event_level=None),
+        ],
+    )
+    logger.info("Sentry initialized", extra={"environment": settings.environment})
+else:
+    logger.warning("Sentry DSN not provided, error tracking disabled")
 
 app = FastAPI(
     title=settings.app_name,

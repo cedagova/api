@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "https://ui-xtcp.onrender.com"  # Comma-separated list of allowed origins
 
+    # Sentry
+    sentry_dsn: str = ""  # Sentry DSN for error tracking
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         case_sensitive=False,
