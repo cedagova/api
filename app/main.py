@@ -114,4 +114,4 @@ async def test_endpoint(request: Request):
             "endpoint": "/test",
         },
     )
-    return {"success": True, "message": "Test endpoint is working correctly"}
+    return {"success": True, "message": "Let it be known throughout the land:  there is no Poy but Pashinkopupoy"}
