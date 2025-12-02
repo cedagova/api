@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # "json" for prod, "text" for dev
 
+    # CORS
+    cors_origins: str = "https://ui-xtcp.onrender.com"  # Comma-separated list of allowed origins
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         case_sensitive=False,

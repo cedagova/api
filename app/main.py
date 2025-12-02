@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.logging_config import setup_logging, get_logger
@@ -15,6 +16,28 @@ app = FastAPI(
     description="A simple FastAPI application",
     version=settings.app_version,
     debug=settings.debug,
+)
+
+# Add CORS middleware - must be added before other middleware
+# Parse CORS origins from settings (comma-separated string)
+cors_origins = [
+    origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
+
+logger.info(
+    "CORS configured",
+    extra={
+        "allowed_origins": cors_origins,
+        "allow_credentials": True,
+    },
 )
 
 # Add logging middleware
