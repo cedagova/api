@@ -80,4 +80,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')"
 
 # Default command to start FastAPI with Uvicorn.
+# Environment variables should be set at runtime (via docker run -e or docker-compose)
+# The app will use ENVIRONMENT variable to load the appropriate .env file
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]

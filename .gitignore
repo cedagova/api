@@ -39,6 +39,8 @@ poetry.lock
 # Environment variables
 .env
 .env.local
+.env.dev
+.env.prod
 
 # OS
 .DS_Store

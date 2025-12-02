@@ -16,7 +16,10 @@ def test_health_endpoint():
     """Test the health check endpoint"""
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "environment" in data
+    assert "version" in data
 
 
 def test_test_endpoint():
