@@ -12,6 +12,8 @@ uvicorn = {extras = ["standard"], version = "^0.32.0"}
 pydantic-settings = "^2.0.0"
 python-json-logger = "^2.0.7"
 sentry-sdk = {extras = ["fastapi"], version = "^2.46.0"}
+opentelemetry-distro = "0.43b0"
+opentelemetry-exporter-otlp = "1.22.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

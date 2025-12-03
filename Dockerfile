@@ -35,6 +35,10 @@ RUN poetry config virtualenvs.create false \
     && poetry install --only main --no-interaction --no-ansi --no-root \
     && rm -rf $POETRY_CACHE_DIR
 
+# Add automatic OpenTelemetry instrumentation
+# This must be run after all dependencies are installed
+RUN opentelemetry-bootstrap --action=install
+
 # Copy your application code.
 # This is done *after* dependency installation to avoid invalidating cache.
 COPY ./app ./app
@@ -79,7 +83,12 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')"
 
-# Default command to start FastAPI with Uvicorn.
+# Default command to start FastAPI with Uvicorn wrapped in OpenTelemetry instrumentation.
 # Environment variables should be set at runtime (via docker run -e or docker-compose)
+# Required OpenTelemetry env vars:
+#   OTEL_RESOURCE_ATTRIBUTES="service.name=<service_name>"
+#   OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.<region>.signoz.cloud"
+#   OTEL_EXPORTER_OTLP_HEADERS="signoz-ingestion-key=<your-ingestion-key>"
+#   OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 # The app will use ENVIRONMENT variable to load the appropriate .env file
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]
+CMD ["opentelemetry-instrument", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]
