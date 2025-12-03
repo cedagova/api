@@ -1,4 +1,3 @@
-import logging
 import sentry_sdk
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,8 +24,14 @@ if settings.sentry_dsn:
         profiles_sample_rate=1.0 if settings.debug else 0.1,  # 100% in dev, 10% in prod
         integrations=[
             FastApiIntegration(transaction_style="endpoint"),
-            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+            # Capture ERROR logs as Sentry events, INFO as breadcrumbs
+            LoggingIntegration(
+                level="INFO",
+                event_level="ERROR",
+            ),
         ],
+        send_default_pii=False,
+        release=settings.app_version or None,
     )
     logger.info("Sentry initialized", extra={"environment": settings.environment})
 else:
@@ -70,8 +75,27 @@ app.include_router(api_router, prefix=settings.api_prefix)
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTPException and send to Sentry if it's a server error (5xx)."""
-    if settings.sentry_dsn and exc.status_code >= 500:
-        sentry_sdk.capture_exception(exc)
+    # Only capture 5xx errors to Sentry
+    if exc.status_code >= 500:
+        # Check if Sentry is initialized before capturing
+        if sentry_sdk.Hub.current.client:
+            try:
+                with sentry_sdk.push_scope() as scope:
+                    scope.set_context(
+                        "request",
+                        {
+                            "path": request.url.path,
+                            "method": request.method,
+                            "query_params": dict(request.query_params),
+                        },
+                    )
+                    # HTTPException is not a real exception, so we create one for Sentry
+                    sentry_sdk.capture_message(
+                        f"HTTPException {exc.status_code}: {exc.detail}", level="error"
+                    )
+            except Exception as e:
+                logger.warning(f"Sentry reporting failed: {e}")
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
@@ -81,8 +105,22 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions and send to Sentry."""
-    if settings.sentry_dsn:
-        sentry_sdk.capture_exception(exc)
+    # Check if Sentry is initialized before capturing
+    if sentry_sdk.Hub.current.client:
+        try:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_context(
+                    "request",
+                    {
+                        "path": request.url.path,
+                        "method": request.method,
+                        "query_params": dict(request.query_params),
+                    },
+                )
+                sentry_sdk.capture_exception(exc)
+        except Exception as e:
+            logger.warning(f"Sentry reporting failed: {e}")
+
     logger.exception(
         "Unhandled exception",
         extra={

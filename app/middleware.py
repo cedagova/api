@@ -78,9 +78,22 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             process_time = time.time() - start_time
 
-            # Capture exception to Sentry
-            if settings.sentry_dsn:
-                sentry_sdk.capture_exception(e)
+            # Capture exception to Sentry (if initialized)
+            if sentry_sdk.Hub.current.client:
+                try:
+                    with sentry_sdk.push_scope() as scope:
+                        scope.set_context(
+                            "request",
+                            {
+                                "method": method,
+                                "path": path,
+                                "query_params": query_params,
+                                "client_ip": client_ip,
+                            },
+                        )
+                        sentry_sdk.capture_exception(e)
+                except Exception as sentry_error:
+                    logger.warning(f"Sentry reporting failed: {sentry_error}")
 
             # Log error
             logger.error(
