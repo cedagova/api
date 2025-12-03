@@ -1,6 +1,8 @@
+import logging
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from app.api.v1.router import api_router
@@ -23,7 +25,7 @@ if settings.sentry_dsn:
         profiles_sample_rate=1.0 if settings.debug else 0.1,  # 100% in dev, 10% in prod
         integrations=[
             FastApiIntegration(transaction_style="endpoint"),
-            LoggingIntegration(level=None, event_level=None),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
         ],
     )
     logger.info("Sentry initialized", extra={"environment": settings.environment})
@@ -63,6 +65,36 @@ logger.info(
 app.add_middleware(LoggingMiddleware)
 
 app.include_router(api_router, prefix=settings.api_prefix)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTPException and send to Sentry if it's a server error (5xx)."""
+    if settings.sentry_dsn and exc.status_code >= 500:
+        sentry_sdk.capture_exception(exc)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions and send to Sentry."""
+    if settings.sentry_dsn:
+        sentry_sdk.capture_exception(exc)
+    logger.exception(
+        "Unhandled exception",
+        extra={
+            "path": request.url.path,
+            "method": request.method,
+            "exception_type": type(exc).__name__,
+        },
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 @app.on_event("startup")
@@ -133,4 +165,7 @@ async def test_endpoint(request: Request):
             "endpoint": "/test",
         },
     )
-    return {"success": True, "message": "Let it be known throughout the land:  there is no Poy but Pashinkopupoy"}
+    return {
+        "success": True,
+        "message": "Let it be known throughout the land:  there is no Poy but Pashinkopupoy",
+    }

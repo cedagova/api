@@ -1,13 +1,18 @@
 """
 Middleware for request/response logging and monitoring.
 """
+
 import time
 from typing import Callable
 
+import sentry_sdk
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config import get_settings
 from app.logging_config import get_logger
+
+settings = get_settings()
 
 logger = get_logger(__name__)
 
@@ -73,6 +78,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             process_time = time.time() - start_time
 
+            # Capture exception to Sentry
+            if settings.sentry_dsn:
+                sentry_sdk.capture_exception(e)
+
             # Log error
             logger.error(
                 "Request failed",
@@ -89,4 +98,3 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # Re-raise the exception
             raise
-
