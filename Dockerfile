@@ -86,9 +86,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Default command to start FastAPI with Uvicorn wrapped in OpenTelemetry instrumentation.
 # Environment variables should be set at runtime (via docker run -e or docker-compose)
 # Required OpenTelemetry env vars:
-#   OTEL_RESOURCE_ATTRIBUTES="service.name=<service_name>"
-#   OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.<region>.signoz.cloud"
+#   OTEL_RESOURCE_ATTRIBUTES="service.name=<service_name>,service.version=<version>,deployment.environment=<env>"
+#   OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.<region>.signoz.cloud:443"
 #   OTEL_EXPORTER_OTLP_HEADERS="signoz-ingestion-key=<your-ingestion-key>"
 #   OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+# Optional for production:
+#   OTEL_TRACES_SAMPLER=traceidratio
+#   OTEL_TRACES_SAMPLER_ARG=0.1  # Sample 10% of traces
 # The app will use ENVIRONMENT variable to load the appropriate .env file
 CMD ["opentelemetry-instrument", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]

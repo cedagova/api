@@ -2,6 +2,7 @@
 Logging configuration for the application.
 
 Provides structured JSON logging for production and readable text logging for development.
+Includes OpenTelemetry trace context correlation for linking logs to traces.
 """
 import logging
 import sys
@@ -56,6 +57,8 @@ def setup_logging() -> None:
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
     logging.getLogger("fastapi").setLevel(logging.INFO)
+    # Suppress verbose OpenTelemetry logs (only show warnings/errors)
+    logging.getLogger("opentelemetry").setLevel(logging.WARNING)
 
     # Log the logging configuration
     logger = logging.getLogger(__name__)
@@ -80,4 +83,34 @@ def get_logger(name: str) -> logging.Logger:
         Configured logger instance
     """
     return logging.getLogger(name)
+
+
+def get_trace_context() -> dict:
+    """
+    Extract OpenTelemetry trace context for log correlation.
+
+    Returns trace_id and span_id if available, empty dict otherwise.
+    This allows logs to be correlated with traces in observability platforms.
+
+    Returns:
+        Dictionary with trace_id and span_id if available
+    """
+    try:
+        from opentelemetry import trace
+
+        span = trace.get_current_span()
+        if span and span.get_span_context().is_valid:
+            ctx = span.get_span_context()
+            return {
+                "trace_id": format(ctx.trace_id, "032x"),
+                "span_id": format(ctx.span_id, "016x"),
+            }
+    except (ImportError, AttributeError):
+        # OpenTelemetry not available or not initialized
+        pass
+    except Exception:
+        # Silently fail to avoid breaking logging
+        pass
+
+    return {}
 

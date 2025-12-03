@@ -25,13 +25,18 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-""}
 export OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS:-""}
 export OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-"grpc"}
 
-# Debug: Print OpenTelemetry config (without sensitive data)
+# Optional: Print OpenTelemetry config for debugging
+# Set DEBUG_OTEL=true to enable
 if [ "${DEBUG_OTEL:-false}" = "true" ]; then
     echo "OpenTelemetry Configuration:"
     echo "  OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES}"
     echo "  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}"
     echo "  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL}"
-    echo "  OTEL_EXPORTER_OTLP_HEADERS: [REDACTED]"
+    if [ -n "${OTEL_EXPORTER_OTLP_HEADERS}" ]; then
+        echo "  OTEL_EXPORTER_OTLP_HEADERS: [SET]"
+    else
+        echo "  OTEL_EXPORTER_OTLP_HEADERS: [NOT SET]"
+    fi
 fi
 
 # Run the application with OpenTelemetry instrumentation

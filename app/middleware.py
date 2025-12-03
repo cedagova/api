@@ -10,7 +10,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
-from app.logging_config import get_logger
+from app.logging_config import get_logger, get_trace_context
 
 settings = get_settings()
 
@@ -40,7 +40,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("user-agent", "unknown")
 
-        # Log request
+        # Log request with trace context for correlation
         logger.info(
             "Incoming request",
             extra={
@@ -50,6 +50,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "client_ip": client_ip,
                 "user_agent": user_agent,
                 "request_id": request.headers.get("x-request-id", "none"),
+                **get_trace_context(),  # Add trace_id and span_id for log-trace correlation
             },
         )
 
@@ -58,7 +59,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             process_time = time.time() - start_time
 
-            # Log successful response
+            # Log successful response with trace context
             logger.info(
                 "Request completed",
                 extra={
@@ -67,6 +68,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "status_code": response.status_code,
                     "process_time_ms": round(process_time * 1000, 2),
                     "client_ip": client_ip,
+                    **get_trace_context(),  # Add trace_id and span_id for log-trace correlation
                 },
             )
 
@@ -95,7 +97,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 except Exception as sentry_error:
                     logger.warning(f"Sentry reporting failed: {sentry_error}")
 
-            # Log error
+            # Log error with trace context
             logger.error(
                 "Request failed",
                 extra={
@@ -105,6 +107,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "error_message": str(e),
                     "process_time_ms": round(process_time * 1000, 2),
                     "client_ip": client_ip,
+                    **get_trace_context(),  # Add trace_id and span_id for log-trace correlation
                 },
                 exc_info=True,
             )
