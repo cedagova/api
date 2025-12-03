@@ -4,6 +4,7 @@ Application configuration using Pydantic Settings.
 This module loads environment variables from .env files based on the ENVIRONMENT variable.
 Supports development (.env.dev) and production (.env.prod) configurations.
 """
+
 import os
 from functools import lru_cache
 from typing import Literal
@@ -40,7 +41,9 @@ class Settings(BaseSettings):
     log_format: str = "json"  # "json" for prod, "text" for dev
 
     # CORS
-    cors_origins: str = "https://ui-xtcp.onrender.com"  # Comma-separated list of allowed origins
+    cors_origins: str = (
+        "https://ui-xtcp.onrender.com,https://www.chunipers.com"  # Comma-separated list of allowed origins
+    )
 
     # Sentry
     sentry_dsn: str = ""  # Sentry DSN for error tracking
@@ -82,4 +85,3 @@ def get_settings() -> Settings:
     settings.environment = environment
 
     return settings
-
